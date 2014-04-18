@@ -17,7 +17,7 @@
 ################################################################################
 
 # Blender Informations
-bl_info = {'version'     : (0, 9, 2),
+bl_info = {'version'     : (0, 9, 3),
            'blender'     : (2, 70, 0),
            'name'        : "Save backupfiles into '__blendercache__' folder",
            'author'      : 'Peter Varo',
@@ -31,7 +31,8 @@ bl_info = {'version'     : (0, 9, 2),
 # Import Python modules
 from errno import EEXIST
 from os import ( makedirs as os_makedirs,
-                 listdir as os_listdir)
+                 listdir as os_listdir,
+                 remove as os_remove )
 from os.path import ( dirname as os_path_dirname,
                       join as os_path_join,
                       isfile as os_path_isfile )
@@ -40,8 +41,8 @@ from re import findall as re_findall
 from shutil import move as shutil_move
 
 # Import Blender modules
-from bpy import (data as bpy_data,
-                 context as bpy_context)
+from bpy import ( data as bpy_data,
+                  context as bpy_context )
 from bpy.app.handlers import ( persistent as bpy_app_handlers_persistent,
                                save_post as bpy_app_handlers_save_post )
 from bpy.path import display_name_from_filepath as bpy_path_display_name_from_filepath
@@ -74,17 +75,21 @@ def increase_index_and_move(src_folder, dst_folder, file, extension,
                                     extension=extension,
                                     src_index=dst_index,
                                     dst_index=dst_index + 1)
+        cleanup = ''
     # If destination file's index is equal or
     # greater than the maximum number of backups allowed
     else:
         src = path(src_folder, max_index - 1)
         dst = path(dst_folder, max_index)
+        cleanup = path(src_folder, src_index)
     # Move source file to destination
     try:
         shutil_move(src, dst)
+        return cleanup
     # If source does not found
     except FileNotFoundError:
-        return
+        return ''
+
 
 
 #------------------------------------------------------------------------------#
@@ -110,24 +115,27 @@ def move_files_to_folder(*args, **kwargs):
                 # the caught error again and print out the traceback
                 raise OSError('\n'.join(traceback_extract_stack())) from None
 
-        # TODO: Cleanup: delete files if their index is greater than max_index!
-
         # Get all files in current directory, move them to the
         # backup folder, if they are backup files and maintain
         # the backup folder's instances
+        cleanup = []
         for filename in reversed(sorted(os_listdir(CWD))):
             # If file is a backup file
             try:
                 index = int(re_findall(REXT, filename)[-1])
-                increase_index_and_move(src_folder=CWD,
-                                        dst_folder=CBD,
-                                        file=FILE,
-                                        extension=EXT,
-                                        src_index=index,
-                                        dst_index=index)
+                cleanup.append(increase_index_and_move(src_folder=CWD,
+                                                       dst_folder=CBD,
+                                                       file=FILE,
+                                                       extension=EXT,
+                                                       src_index=index,
+                                                       dst_index=index)
             # If file is not a backup file
             except IndexError:
                 pass
+
+        # Cleanup: delete files if their index is greater than max_index!
+        for full_file_path in filter(bool, cleanup):
+            os_remove(full_file_path)
 
         # If everything went fine, print out information
         if PRINT_INFO:
