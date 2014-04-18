@@ -17,7 +17,7 @@
 ################################################################################
 
 # Blender Informations
-bl_info = {'version'     : (0, 9, 3),
+bl_info = {'version'     : (0, 9, 4),
            'blender'     : (2, 70, 0),
            'name'        : "Save backupfiles into '__blendercache__' folder",
            'author'      : 'Peter Varo',
@@ -123,19 +123,19 @@ def move_files_to_folder(*args, **kwargs):
             # If file is a backup file
             try:
                 index = int(re_findall(REXT, filename)[-1])
-                cleanup.append(increase_index_and_move(src_folder=CWD,
-                                                       dst_folder=CBD,
-                                                       file=FILE,
-                                                       extension=EXT,
-                                                       src_index=index,
-                                                       dst_index=index)
+                # If file's index is greater than the
+                # current number of backups allowed the full path
+                # of the file will be returned and will be deleted
+                # else os.remove will raise FileNotFoundError
+                os.remove(increase_index_and_move(src_folder=CWD,
+                                                  dst_folder=CBD,
+                                                  file=FILE,
+                                                  extension=EXT,
+                                                  src_index=index,
+                                                  dst_index=index))
             # If file is not a backup file
-            except IndexError:
+            except (IndexError, FileNotFoundError):
                 pass
-
-        # Cleanup: delete files if their index is greater than max_index!
-        for full_file_path in filter(bool, cleanup):
-            os_remove(full_file_path)
 
         # If everything went fine, print out information
         if PRINT_INFO:
