@@ -17,15 +17,15 @@
 ################################################################################
 
 # Blender Informations
-bl_info = {'version'     : (0, 9, 4),
+bl_info = {'version'     : (0, 9, 5),
            'blender'     : (2, 70, 0),
-           'name'        : "Save backupfiles into '__blendercache__' folder",
+           'name'        : 'Save back up files into subfolder',
            'author'      : 'Peter Varo',
-           'description' : "Save backupfiles into '__blendercache__' folder" ,
+           'description' : ('Cleans up CWD; Places back ups to subfolder; '
+                            'Keeps subfolder organised.'),
            'category'    : 'System',
            'location'    : ("Go to 'File > User Preferences > File > Save "
-                            "Versions' to change the number of backups this "
-                            "script will save.")}
+                            "Versions' to set the number of back ups.")}
 
 #------------------------------------------------------------------------------#
 # Import Python modules
@@ -51,14 +51,13 @@ from bpy.path import display_name_from_filepath as bpy_path_display_name_from_fi
 #------------------------------------------------------------------------------#
 # Module level constants
 BACKUP_FOLDER_NAME = '__blendercache__'
-BACKUP_COUNT = bpy_context.user_preferences.filepaths.save_version
 PRINT_INFO = True
 INFO_TEXT = 'Backup file(s) moved\n\tfrom:\n\t\t{!r}\n\tto\n\t\t{!r}'
 
 
 #------------------------------------------------------------------------------#
 def increase_index_and_move(src_folder, dst_folder, file, extension,
-                            src_index, dst_index, max_index=BACKUP_COUNT):
+                            src_index, dst_index, max_index):
     # Helper function to format the full source and destination path
     path = lambda f, i: os_path_join(f, extension.format(file, i))
     # If destination file's index is lesser than
@@ -74,7 +73,8 @@ def increase_index_and_move(src_folder, dst_folder, file, extension,
                                     file=file,
                                     extension=extension,
                                     src_index=dst_index,
-                                    dst_index=dst_index + 1)
+                                    dst_index=dst_index + 1,
+                                    max_index=max_index)
         cleanup = ''
     # If destination file's index is equal or
     # greater than the maximum number of backups allowed
@@ -91,10 +91,11 @@ def increase_index_and_move(src_folder, dst_folder, file, extension,
         return ''
 
 
-
 #------------------------------------------------------------------------------#
 @bpy_app_handlers_persistent
 def move_files_to_folder(*args, **kwargs):
+    # Maximum backup allowed by user
+    BACKUP_COUNT = bpy_context.user_preferences.filepaths.save_version
     # If saving backups option is 'ON'
     if BACKUP_COUNT:
         # Function level constants
@@ -118,7 +119,6 @@ def move_files_to_folder(*args, **kwargs):
         # Get all files in current directory, move them to the
         # backup folder, if they are backup files and maintain
         # the backup folder's instances
-        cleanup = []
         for filename in reversed(sorted(os_listdir(CWD))):
             # If file is a backup file
             try:
@@ -127,12 +127,13 @@ def move_files_to_folder(*args, **kwargs):
                 # current number of backups allowed the full path
                 # of the file will be returned and will be deleted
                 # else os.remove will raise FileNotFoundError
-                os.remove(increase_index_and_move(src_folder=CWD,
+                os_remove(increase_index_and_move(src_folder=CWD,
                                                   dst_folder=CBD,
                                                   file=FILE,
                                                   extension=EXT,
                                                   src_index=index,
-                                                  dst_index=index))
+                                                  dst_index=index,
+                                                  max_index=BACKUP_COUNT))
             # If file is not a backup file
             except (IndexError, FileNotFoundError):
                 pass
