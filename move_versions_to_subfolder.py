@@ -17,7 +17,7 @@
 ################################################################################
 
 # Blender Informations
-bl_info = {'version'     : (0, 9, 5),
+bl_info = {'version'     : (1, 0, 0),
            'blender'     : (2, 70, 0),
            'name'        : 'Save back up files into subfolder',
            'author'      : 'Peter Varo',
@@ -41,11 +41,7 @@ from re import findall as re_findall
 from shutil import move as shutil_move
 
 # Import Blender modules
-from bpy import ( data as bpy_data,
-                  context as bpy_context )
-from bpy.app.handlers import ( persistent as bpy_app_handlers_persistent,
-                               save_post as bpy_app_handlers_save_post )
-from bpy.path import display_name_from_filepath as bpy_path_display_name_from_filepath
+import bpy
 
 
 #------------------------------------------------------------------------------#
@@ -92,15 +88,15 @@ def increase_index_and_move(src_folder, dst_folder, file, extension,
 
 
 #------------------------------------------------------------------------------#
-@bpy_app_handlers_persistent
+@bpy.app.handlers.persistent
 def move_files_to_folder(*args, **kwargs):
     # Maximum backup allowed by user
-    BACKUP_COUNT = bpy_context.user_preferences.filepaths.save_version
+    BACKUP_COUNT = bpy.context.user_preferences.filepaths.save_version
     # If saving backups option is 'ON'
     if BACKUP_COUNT:
         # Function level constants
-        PATH = bpy_data.filepath                         # Full path
-        FILE = bpy_path_display_name_from_filepath(PATH) # File name
+        PATH = bpy.data.filepath                         # Full path
+        FILE = bpy.path.display_name_from_filepath(PATH) # File name
         CWD  = os_path_dirname(PATH)                     # Current Working Directory
         CBD  = os_path_join(CWD, BACKUP_FOLDER_NAME)     # Current Backup Directory
         REXT = r'{}\.blend(\d+)$'.format(FILE)           # Regex to catch backups
@@ -145,10 +141,10 @@ def move_files_to_folder(*args, **kwargs):
 
 #------------------------------------------------------------------------------#
 def register():
-    bpy_app_handlers_save_post.append(move_files_to_folder)
+    bpy.app.handlers.save_post.append(move_files_to_folder)
 
 def unregister():
-    bpy_app_handlers_save_post.remove(move_files_to_folder)
+    bpy.app.handlers.save_post.remove(move_files_to_folder)
 
 #------------------------------------------------------------------------------#
 if __name__ == '__main__':
